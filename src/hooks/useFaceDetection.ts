@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { FaceMesh, Results } from "@mediapipe/face_mesh";
+// --- CHANGE 1: Import the entire module ---
+import * as mediapipeFaceMesh from "@mediapipe/face_mesh";
 import type { DetectionState } from "../types/proctoring";
-
-// --- START: New EAR Calculation Logic ---
 
 // Helper to calculate the distance between two points
 const euclidianDistance = (p1: any, p2: any) => {
@@ -25,96 +24,83 @@ const calculateEAR = (eyeLandmarks: any[]) => {
   return ear;
 };
 
-// These are the specific landmark indices for eyes from MediaPipe
+const calculateFocus = (landmarks: any[]): boolean => {
+  if (!landmarks || landmarks.length === 0) return false;
+  const nose = landmarks[1];
+  const leftEye = landmarks[33];
+  const rightEye = landmarks[263];
+  const mouthLeft = landmarks[61];
+  const mouthRight = landmarks[291];
+  const eyeCenter = {
+    x: (leftEye.x + rightEye.x) / 2,
+    y: (leftEye.y + rightEye.y) / 2,
+  };
+  const horizontalDist = Math.abs(eyeCenter.x - nose.x);
+  const eyeDist = euclidianDistance(leftEye, rightEye);
+  const horizontalRatio = horizontalDist / eyeDist;
+  const mouthCenter = {
+    x: (mouthLeft.x + mouthRight.x) / 2,
+    y: (mouthLeft.y + mouthRight.y) / 2,
+  };
+  const verticalDist = Math.abs(eyeCenter.y - mouthCenter.y);
+  const noseToMouthDist = euclidianDistance(nose, mouthCenter);
+  const verticalRatio = noseToMouthDist / verticalDist;
+  const isFocused = horizontalRatio < 0.15 && verticalRatio > 1.2;
+  return isFocused;
+};
+
 const LEFT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380];
 const RIGHT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144];
-
-// Thresholds for drowsiness detection
-const EAR_THRESHOLD = 0.22; // If EAR is below this, the eye is considered closed
-const DROWSINESS_TIME_THRESHOLD = 2000; // 2 seconds of closed eyes triggers drowsiness
-
-// --- END: New EAR Calculation Logic ---
-
-// This function remains unchanged
-const calculateFocus = (landmarks: any[]): number => {
-  if (!landmarks || landmarks.length === 0) return 0;
-  // const p1 = landmarks[1];
-  // const p2 = landmarks[152];
-  const p3 = landmarks[234];
-  const p4 = landmarks[454];
-  const midPointX = (p3.x + p4.x) / 2;
-  const noseX = landmarks[4].x;
-  const focusScore = 1 - (2 * Math.abs(midPointX - noseX)) / (p4.x - p3.x);
-  return isNaN(focusScore) ? 1 : focusScore;
-};
+const EAR_THRESHOLD = 0.22;
+const DROWSINESS_TIME_THRESHOLD = 2000;
 
 export const useFaceDetection = (
   videoElement: HTMLVideoElement | null,
   isActive: boolean
 ) => {
-  const faceMeshRef = useRef<FaceMesh | null>(null);
+  const faceMeshRef = useRef<mediapipeFaceMesh.FaceMesh | null>(null);
   const animationFrameRef = useRef<number>();
-  // New ref to track when drowsiness (eye closure) starts
   const drowsinessStartRef = useRef<number | null>(null);
-
   const [detectionState, setDetectionState] = useState<DetectionState>({
     isFocused: true,
-    isDrowsy: false, // Add isDrowsy to the initial state
+    isDrowsy: false,
     faceCount: 0,
     lastFaceDetected: Date.now(),
     focusLostStart: null,
     noFaceStart: null,
   });
 
-  const onResults = useCallback((results: Results) => {
+  const onResults = useCallback((results: mediapipeFaceMesh.Results) => {
     const now = Date.now();
     const faceCount = results.multiFaceLandmarks
       ? results.multiFaceLandmarks.length
       : 0;
-
     let isFocused = true;
     let isDrowsy = false;
-
     if (faceCount === 1) {
       const landmarks = results.multiFaceLandmarks[0];
-
-      // Focus calculation (unchanged)
-      const focusScore = calculateFocus(landmarks);
-      if (focusScore < 0.6) {
-        isFocused = false;
-      }
-
-      // --- START: Drowsiness Detection Logic ---
+      isFocused = calculateFocus(landmarks);
       const leftEye = LEFT_EYE_LANDMARKS.map((i) => landmarks[i]);
       const rightEye = RIGHT_EYE_LANDMARKS.map((i) => landmarks[i]);
-
       const leftEAR = calculateEAR(leftEye);
       const rightEAR = calculateEAR(rightEye);
       const avgEAR = (leftEAR + rightEAR) / 2.0;
-
-      // Check if eyes are closed
       if (avgEAR < EAR_THRESHOLD) {
         if (!drowsinessStartRef.current) {
-          // If eyes just closed, start the timer
           drowsinessStartRef.current = now;
         } else if (
           now - drowsinessStartRef.current >
           DROWSINESS_TIME_THRESHOLD
         ) {
-          // If eyes have been closed long enough, set drowsy flag
           isDrowsy = true;
         }
       } else {
-        // If eyes are open, reset the timer
         drowsinessStartRef.current = null;
         isDrowsy = false;
       }
-      // --- END: Drowsiness Detection Logic ---
-    } else if (faceCount !== 1) {
+    } else {
       isFocused = false;
     }
-
-    // Update the main detection state with all flags
     setDetectionState((prev) => ({
       ...prev,
       faceCount,
@@ -148,10 +134,12 @@ export const useFaceDetection = (
   useEffect(() => {
     if (!isActive) return;
 
-    const faceMesh = new FaceMesh({
+    // --- CHANGE 2: Use the new import name here ---
+    const faceMesh = new mediapipeFaceMesh.FaceMesh({
       locateFile: (file) =>
         `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     });
+
     faceMesh.setOptions({
       maxNumFaces: 2,
       refineLandmarks: true,
@@ -160,7 +148,6 @@ export const useFaceDetection = (
     });
     faceMesh.onResults(onResults);
     faceMeshRef.current = faceMesh;
-
     return () => {
       faceMesh.close();
       faceMeshRef.current = null;
