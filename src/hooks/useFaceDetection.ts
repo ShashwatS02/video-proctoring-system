@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { DetectionState } from "../types/proctoring";
 
-// This tells TypeScript that "FaceMesh" and "Results" will be available globally
-// on the window object, even though we are not importing them directly.
+// This tells TypeScript that "FaceMesh" and "Results" are loaded globally from the script in index.html
 declare const FaceMesh: any;
 declare const Results: any;
 
-// Helper to calculate the distance between two points
 const euclidianDistance = (p1: any, p2: any) => {
   return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
 };
 
-// Calculates the Eye Aspect Ratio
 const calculateEAR = (eyeLandmarks: any[]) => {
   const p1 = eyeLandmarks[0],
     p2 = eyeLandmarks[1],
@@ -24,30 +21,32 @@ const calculateEAR = (eyeLandmarks: any[]) => {
   return verticalDist / (2.0 * horizontalDist);
 };
 
-// Calculates Focus
+// --- START: NEW STABLE FOCUS CALCULATION ---
 const calculateFocus = (landmarks: any[]): boolean => {
   if (!landmarks || landmarks.length === 0) return false;
-  const nose = landmarks[1],
-    leftEye = landmarks[33],
-    rightEye = landmarks[263],
-    mouthLeft = landmarks[61],
-    mouthRight = landmarks[291];
-  const eyeCenter = {
-    x: (leftEye.x + rightEye.x) / 2,
-    y: (leftEye.y + rightEye.y) / 2,
-  };
-  const horizontalDist = Math.abs(eyeCenter.x - nose.x);
-  const eyeDist = euclidianDistance(leftEye, rightEye);
-  const horizontalRatio = horizontalDist / eyeDist;
-  const mouthCenter = {
-    x: (mouthLeft.x + mouthRight.x) / 2,
-    y: (mouthLeft.y + mouthRight.y) / 2,
-  };
-  const verticalDist = Math.abs(eyeCenter.y - mouthCenter.y);
-  const noseToMouthDist = euclidianDistance(nose, mouthCenter);
-  const verticalRatio = noseToMouthDist / verticalDist;
-  return horizontalRatio < 0.15 && verticalRatio > 1.2;
+
+  const rightTemple = landmarks[234];
+  const leftTemple = landmarks[454];
+  const noseTip = landmarks[4];
+
+  if (!rightTemple || !leftTemple || !noseTip) return true;
+
+  const templeDist = Math.abs(leftTemple.x - rightTemple.x);
+  if (templeDist < 0.1) return true; // Avoid division by zero
+
+  const midPointX = (leftTemple.x + rightTemple.x) / 2;
+  const noseDistFromCenter = Math.abs(midPointX - noseTip.x);
+
+  // Ratio of how far the nose is from the center, relative to temple distance
+  const focusRatio = noseDistFromCenter / templeDist;
+
+  // If the nose has moved more than 20% of the way towards a temple,
+  // we consider the user "not focused". This is a stable threshold.
+  const FOCUS_THRESHOLD = 0.2;
+
+  return focusRatio < FOCUS_THRESHOLD;
 };
+// --- END: NEW STABLE FOCUS CALCULATION ---
 
 const LEFT_EYE_LANDMARKS = [362, 385, 387, 263, 373, 380];
 const RIGHT_EYE_LANDMARKS = [33, 160, 158, 133, 153, 144];
@@ -80,7 +79,10 @@ export const useFaceDetection = (
     let isDrowsy = false;
     if (faceCount === 1) {
       const landmarks = results.multiFaceLandmarks[0];
+
+      // Use the new, stable focus function
       isFocused = calculateFocus(landmarks);
+
       const leftEye = LEFT_EYE_LANDMARKS.map((i) => landmarks[i]);
       const rightEye = RIGHT_EYE_LANDMARKS.map((i) => landmarks[i]);
       const avgEAR = (calculateEAR(leftEye) + calculateEAR(rightEye)) / 2.0;
@@ -121,6 +123,15 @@ export const useFaceDetection = (
     }));
   }, []);
 
+  const detectionLoop = useCallback(async () => {
+    if (faceMeshRef.current && videoElement && videoElement.readyState >= 3) {
+      await faceMeshRef.current.send({ image: videoElement });
+    }
+    if (isActive) {
+      animationFrameRef.current = requestAnimationFrame(detectionLoop);
+    }
+  }, [videoElement, isActive]);
+
   useEffect(() => {
     if (isActive && !faceMeshRef.current) {
       const faceMesh = new FaceMesh({
@@ -137,15 +148,6 @@ export const useFaceDetection = (
       faceMeshRef.current = faceMesh;
     }
   }, [isActive, onResults]);
-
-  const detectionLoop = useCallback(async () => {
-    if (faceMeshRef.current && videoElement && videoElement.readyState >= 3) {
-      await faceMeshRef.current.send({ image: videoElement });
-    }
-    if (isActive) {
-      animationFrameRef.current = requestAnimationFrame(detectionLoop);
-    }
-  }, [videoElement, isActive]);
 
   useEffect(() => {
     if (isActive && videoElement) {
