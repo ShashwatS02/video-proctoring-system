@@ -2,6 +2,13 @@
 
 A comprehensive video proctoring system designed for online interviews with advanced computer vision capabilities for focus detection and unauthorized object identification.
 
+---
+
+## 🚀 Live Demo
+👉 [Try the Live App](https://smart-proctoring-system.netlify.app/)
+
+---
+
 ## 🎯 Features
 
 ### Core Functionality
@@ -125,19 +132,31 @@ A comprehensive video proctoring system designed for online interviews with adva
 ### Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── VideoFeed.tsx   # Video streaming and detection overlay
-│   ├── MonitoringDashboard.tsx  # Real-time monitoring panel
-│   ├── SessionSetup.tsx         # Interview session setup
-│   └── ProctoringReport.tsx     # Report generation and display
-├── hooks/              # Custom React hooks
-│   ├── useVideoStream.ts       # Video stream management
-│   ├── useObjectDetection.ts   # Object detection logic
-│   └── useFaceDetection.ts     # Face detection and focus tracking
-├── types/              # TypeScript type definitions
-├── utils/              # Utility functions
-└── App.tsx            # Main application component
+Focus & Object Detection in Video Interviews/
+├── public/
+│   └── favicon.svg
+├── src/
+│   ├── components/
+│   │   ├── MonitoringDashboard.tsx
+│   │   ├── ProctoringReport.tsx
+│   │   ├── SessionSetup.tsx
+│   │   └── VideoFeed.tsx
+│   ├── hooks/
+│   │   ├── useAudioDetection.ts
+│   │   ├── useFaceDetection.ts
+│   │   ├── useObjectDetection.ts
+│   │   └── useVideoStream.ts
+│   ├── types/
+│   │   └── proctoring.ts
+│   ├── utils/
+│   │   └── reportGenerator.ts
+│   ├── App.tsx
+│   ├── supabaseConfig.ts
+│   └── ...
+├── .env
+├── index.html
+└── package.json
+
 ```
 
 ### Key Technologies
