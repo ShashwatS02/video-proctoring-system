@@ -1,5 +1,9 @@
 # Video Proctoring System - Focus & Object Detection
 
+<p align="center">
+  <img src="https://placehold.co/800x350/1a1a1a/FFFFFF?text=Video+Proctoring+System&font=raleway" alt="Project Banner">
+</p>
+
 A comprehensive video proctoring system designed for online interviews with advanced computer vision capabilities for focus detection and unauthorized object identification.
 
 ---
@@ -28,14 +32,16 @@ A comprehensive video proctoring system designed for online interviews with adva
 - **Responsive Design**: Optimized for desktop interview setups
 - **Modern UI/UX**: Clean, professional interface
 
-## 🚀 Tech Stack
+## 🛠️ Tech Stack
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS
-- **Computer Vision**: TensorFlow.js, COCO-SSD, MediaPipe
-- **Video Processing**: WebRTC, HTML5 Video API
-- **Reports**: jsPDF, html2canvas
-- **Build Tool**: Vite
-- **Icons**: Lucide React
+![React](https://img.shields.io/badge/React-18-61dafb?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-38b2ac?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-ff6f00?style=for-the-badge&logo=tensorflow&logoColor=white)
+![MediaPipe](https://img.shields.io/badge/MediaPipe-4285f4?style=for-the-badge&logo=google&logoColor=white)
+![WebRTC](https://img.shields.io/badge/WebRTC-e03c31?style=for-the-badge&logo=webrtc&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+
 
 ## 📋 Installation & Setup
 
